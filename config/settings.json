@@ -1,0 +1,48 @@
+{
+  "audio": {
+    "device_name": "BlackHole 2ch",
+    "sample_rate": 16000,
+    "channels": 1,
+    "threshold_db": -50,
+    "min_duration_seconds": 30,
+    "max_silence_seconds": 10
+  },
+  "recording": {
+    "format": "wav",
+    "quality": "high",
+    "auto_cleanup_days": 30
+  },
+  "transcription": {
+    "language": "en-US",
+    "use_neural_engine": true,
+    "real_time": true
+  },
+  "diarization": {
+    "min_speakers": 1,
+    "max_speakers": 10,
+    "enable": true
+  },
+  "ai": {
+    "model": "mistral:7b-q4",
+    "temperature": 0.3,
+    "max_tokens": 2000
+  },
+  "calendar": {
+    "enabled": false,
+    "tenant_id": "",
+    "client_id": "",
+    "client_secret": ""
+  },
+  "notifications": {
+    "enabled": true,
+    "show_start": true,
+    "show_end": true,
+    "show_summary": true
+  },
+  "paths": {
+    "recordings": "./recordings",
+    "transcripts": "./transcripts", 
+    "notes": "./notes",
+    "logs": "./logs"
+  }
+}

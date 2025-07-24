@@ -1,0 +1,22 @@
+{
+  "monitored_apps": [
+    "Microsoft Teams",
+    "zoom.us",
+    "Google Chrome",
+    "Safari",
+    "WhatsApp",
+    "Messenger",
+    "Skype",
+    "Discord",
+    "Slack",
+    "FaceTime"
+  ],
+  "meeting_keywords": [
+    "meet.google.com",
+    "teams.microsoft.com",
+    "zoom.us",
+    "webex.com",
+    "gotomeeting.com",
+    "bluejeans.com"
+  ]
+}
