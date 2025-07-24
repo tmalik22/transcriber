@@ -9,10 +9,39 @@ import sys
 import json
 import time
 import argparse
-import torch
-import torchaudio
-from pathlib import Path
 import subprocess
+from pathlib import Path
+
+# Optional imports with fallbacks
+try:
+    import torch
+    import torchaudio
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    torch = None
+    torchaudio = None
+
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None
+
+try:
+    import librosa
+    HAS_LIBROSA = True
+except ImportError:
+    HAS_LIBROSA = False
+    librosa = None
+
+try:
+    from pyannote.audio import Pipeline
+    HAS_PYANNOTE = True
+except ImportError:
+    HAS_PYANNOTE = False
+    Pipeline = None
 
 # Add project root to path
 PROJECT_DIR = Path(__file__).parent.parent
@@ -38,10 +67,11 @@ def log(message, session_id=None):
 
 def simple_voice_activity_detection(audio_file, session_id):
     """Simple VAD using energy-based detection"""
+    if not HAS_LIBROSA or not HAS_NUMPY:
+        log("librosa and numpy not available, skipping VAD", session_id)
+        return []
+    
     try:
-        import librosa
-        import numpy as np
-        
         log("Loading audio for VAD...", session_id)
         y, sr = librosa.load(str(audio_file), sr=16000)
         
@@ -77,9 +107,6 @@ def simple_voice_activity_detection(audio_file, session_id):
         log(f"Found {len(segments)} voice activity segments", session_id)
         return segments
         
-    except ImportError:
-        log("librosa not available, skipping VAD", session_id)
-        return []
     except Exception as e:
         log(f"VAD error: {e}", session_id)
         return []
@@ -111,9 +138,11 @@ def cluster_speakers_simple(segments, max_speakers=4):
 
 def pyannote_diarization(audio_file, session_id):
     """Speaker diarization using pyannote.audio"""
+    if not HAS_PYANNOTE:
+        log("pyannote.audio not available, using simple method", session_id)
+        return None
+    
     try:
-        from pyannote.audio import Pipeline
-        
         log("Initializing pyannote pipeline...", session_id)
         
         # Initialize the pipeline
@@ -137,9 +166,6 @@ def pyannote_diarization(audio_file, session_id):
         log(f"Pyannote found {len(speaker_segments)} speaker segments", session_id)
         return speaker_segments
         
-    except ImportError:
-        log("pyannote.audio not available, using simple method", session_id)
-        return None
     except Exception as e:
         log(f"Pyannote error: {e}, falling back to simple method", session_id)
         return None

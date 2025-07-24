@@ -9,9 +9,17 @@ import sys
 import json
 import time
 import re
-import requests
+import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
+
+# Optional imports with fallbacks
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    requests = None
 
 # Add project root to path
 PROJECT_DIR = Path(__file__).parent.parent
@@ -210,12 +218,20 @@ def create_calendar_event_local(item, session_id):
 
 def get_microsoft_graph_token(config):
     """Get Microsoft Graph API access token"""
+    if not HAS_REQUESTS:
+        log("Warning: requests library not available for Microsoft Graph integration")
+        return None
+    
     # This is a placeholder - you'd need to implement OAuth flow
     # For now, return None to use fallback method
     return None
 
 def create_microsoft_graph_event(item, token, session_id):
     """Create event using Microsoft Graph API"""
+    if not HAS_REQUESTS:
+        log("Microsoft Graph API requires requests library", session_id)
+        return False
+    
     # Placeholder for Microsoft Graph integration
     # This would require proper OAuth setup
     log("Microsoft Graph API not configured, using local calendar", session_id)

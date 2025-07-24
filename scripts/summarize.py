@@ -8,9 +8,16 @@ Processes transcripts to extract key points, decisions, and action items
 import sys
 import json
 import time
-import requests
 import subprocess
 from pathlib import Path
+
+# Optional imports with fallbacks
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+    requests = None
 
 # Add project root to path
 PROJECT_DIR = Path(__file__).parent.parent
@@ -42,6 +49,10 @@ def log(message, session_id=None):
 
 def check_ollama_availability():
     """Check if Ollama is running and available"""
+    if not HAS_REQUESTS:
+        log("Warning: requests library not available, cannot check Ollama status")
+        return False
+    
     try:
         response = requests.get("http://localhost:11434/api/version", timeout=5)
         return response.status_code == 200
@@ -50,6 +61,9 @@ def check_ollama_availability():
 
 def list_ollama_models():
     """List available Ollama models"""
+    if not HAS_REQUESTS:
+        return []
+    
     try:
         response = requests.get("http://localhost:11434/api/tags", timeout=10)
         if response.status_code == 200:
@@ -61,6 +75,9 @@ def list_ollama_models():
 
 def query_ollama(prompt, model, temperature=0.3, max_tokens=2000):
     """Send query to Ollama API"""
+    if not HAS_REQUESTS:
+        return "Error: requests library not available"
+    
     try:
         payload = {
             "model": model,

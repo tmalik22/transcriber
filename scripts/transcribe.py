@@ -12,9 +12,22 @@ import argparse
 import subprocess
 import tempfile
 from pathlib import Path
-import speech_recognition as sr
-from pydub import AudioSegment
 import wave
+
+# Optional imports with fallbacks
+try:
+    import speech_recognition as sr
+    HAS_SPEECH_RECOGNITION = True
+except ImportError:
+    HAS_SPEECH_RECOGNITION = False
+    sr = None
+
+try:
+    from pydub import AudioSegment
+    HAS_PYDUB = True
+except ImportError:
+    HAS_PYDUB = False
+    AudioSegment = None
 
 # Add project root to path
 PROJECT_DIR = Path(__file__).parent.parent
@@ -40,6 +53,10 @@ def log(message, session_id=None):
 
 def transcribe_audio_file(audio_file, session_id):
     """Transcribe an audio file using speech recognition"""
+    if not HAS_SPEECH_RECOGNITION:
+        log("Error: speech_recognition library not installed. Run: pip install SpeechRecognition", session_id)
+        return "Transcription unavailable - missing speech_recognition library"
+    
     config = load_config()
     transcript_file = PROJECT_DIR / "transcripts" / f"{session_id}.txt"
     
@@ -57,19 +74,26 @@ def transcribe_audio_file(audio_file, session_id):
         
         log("Audio loaded, starting transcription...", session_id)
         
-        # Use macOS built-in speech recognition
+        # Try different recognition engines in order of preference
+        text = ""
+        
+        # Try OpenAI Whisper first (best quality)
         try:
             text = recognizer.recognize_whisper(audio_data, language="en-US")
             log("Transcription completed using Whisper", session_id)
-        except sr.RequestError:
+        except (sr.RequestError, AttributeError):
             # Fallback to Google Speech Recognition
             try:
                 text = recognizer.recognize_google(audio_data, language="en-US")
                 log("Transcription completed using Google Speech", session_id)
             except sr.RequestError:
-                # Final fallback to basic recognition
-                text = recognizer.recognize_sphinx(audio_data)
-                log("Transcription completed using CMU Sphinx", session_id)
+                # Final fallback to basic recognition (offline)
+                try:
+                    text = recognizer.recognize_sphinx(audio_data)
+                    log("Transcription completed using CMU Sphinx", session_id)
+                except sr.RequestError:
+                    text = "Transcription failed - no recognition engines available"
+                    log("All transcription engines failed", session_id)
         
         # Save transcript
         with open(transcript_file, 'w') as f:
@@ -92,6 +116,10 @@ def transcribe_audio_file(audio_file, session_id):
 
 def transcribe_live(session_id, audio_device):
     """Live transcription from audio device"""
+    if not HAS_SPEECH_RECOGNITION:
+        log("Error: speech_recognition library not installed. Run: pip install SpeechRecognition", session_id)
+        return None
+    
     config = load_config()
     transcript_file = PROJECT_DIR / "transcripts" / f"{session_id}_live.txt"
     
@@ -99,7 +127,12 @@ def transcribe_live(session_id, audio_device):
     
     # Initialize speech recognizer
     recognizer = sr.Recognizer()
-    microphone = sr.Microphone()
+    
+    try:
+        microphone = sr.Microphone()
+    except OSError as e:
+        log(f"Microphone not available: {e}", session_id)
+        return None
     
     # Adjust for ambient noise
     with microphone as source:
@@ -120,7 +153,15 @@ def transcribe_live(session_id, audio_device):
                 
                 try:
                     # Recognize speech
-                    text = recognizer.recognize_whisper(audio, language="en-US")
+                    text = ""
+                    try:
+                        text = recognizer.recognize_whisper(audio, language="en-US")
+                    except (sr.RequestError, AttributeError):
+                        try:
+                            text = recognizer.recognize_google(audio, language="en-US")
+                        except sr.RequestError:
+                            # Skip this chunk if recognition fails
+                            continue
                     
                     if text.strip():
                         chunk_count += 1
@@ -157,6 +198,10 @@ def transcribe_live(session_id, audio_device):
 
 def convert_audio_format(input_file):
     """Convert audio file to format suitable for speech recognition"""
+    if not HAS_PYDUB:
+        log("Warning: pydub not available, using original file format")
+        return str(input_file)
+    
     try:
         # Load audio file
         audio = AudioSegment.from_file(str(input_file))
